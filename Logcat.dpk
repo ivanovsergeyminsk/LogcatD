@@ -1,0 +1,62 @@
+package Logcat;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$DEFINE BPL}
+{$ENDIF IMPLICITBUILDING}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  designide,
+  VirtualTreesDR,
+  SVGIconImageList,
+  SVGImage32Package;
+
+contains
+  Form.Logcat in 'source\Form.Logcat.pas' {FormLogcat},
+  Frame.Logcat in 'source\Frame.Logcat.pas' {FrameLogcat: TFrame},
+  DM.Logcat in 'source\DM.Logcat.pas' {DMLogcat: TDataModule},
+  adb.AdbHelper in 'source\adb.AdbHelper.pas',
+  adb.AndroidDebugBridge in 'source\adb.AndroidDebugBridge.pas',
+  adb.Device in 'source\adb.Device.pas',
+  adb.DeviceMonitor in 'source\adb.DeviceMonitor.pas',
+  adb.Logcat in 'source\adb.Logcat.pas',
+  adb.Preferences in 'source\adb.Preferences.pas',
+  adb.Protocol in 'source\adb.Protocol.pas',
+  adb.Receiver.CollectingOutputReceiver in 'source\adb.Receiver.CollectingOutputReceiver.pas',
+  adb.Receiver.GetPropReceiver in 'source\adb.Receiver.GetPropReceiver.pas',
+  adb.Receiver.MultiLineReceiver in 'source\adb.Receiver.MultiLineReceiver.pas',
+  adb.Receiver.NullOutputReceiver in 'source\adb.Receiver.NullOutputReceiver.pas',
+  Common.Debug in 'source\Common.Debug.pas',
+  System.AtomicTypes in 'source\System.AtomicTypes.pas',
+  System.Net.SocketHelper in 'source\System.Net.SocketHelper.pas',
+  System.Pipes in 'source\System.Pipes.pas',
+  System.Process in 'source\System.Process.pas',
+  System.Types.Nullable in 'source\System.Types.Nullable.pas',
+  Form.Logcat.TakeScreenshot in 'source\Form.Logcat.TakeScreenshot.pas' {FormTakeScreenshot},
+  adb.RawImage in 'source\adb.RawImage.pas';
+
+end.

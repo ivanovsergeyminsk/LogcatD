@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="32"
+   height="32"
+   viewBox="0 0 32 32"
+   version="1.1"
+   id="svg5"
+   xml:space="preserve"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   sodipodi:docname="Cross.svg"
+   inkscape:export-filename="Cross_x16.png"
+   inkscape:export-xdpi="48"
+   inkscape:export-ydpi="48"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><sodipodi:namedview
+     id="namedview7"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:document-units="px"
+     showgrid="false"
+     inkscape:zoom="14.75"
+     inkscape:cx="25.050847"
+     inkscape:cy="24.576271"
+     inkscape:window-width="1920"
+     inkscape:window-height="1111"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" /><defs
+     id="defs2" /><g
+     inkscape:label="Слой 1"
+     inkscape:groupmode="layer"
+     id="layer1"><g
+       id="g2464"
+       transform="translate(-1.9322032,-2.1855931)"
+       style="fill:#b3b3b3"><g
+         id="Layer_1"
+         style="fill:#b3b3b3" /><g
+         id="icons"
+         style="fill:#b3b3b3"><path
+           class="st0"
+           d="M 6.2,3.5 3.5,6.2 c -0.7,0.7 -0.7,1.9 0,2.7 l 9.2,9.2 -9.2,9.2 C 2.8,28 2.8,29.2 3.5,30 l 2.6,2.6 c 0.7,0.7 1.9,0.7 2.7,0 l 9.2,-9.2 9.2,9.2 c 0.7,0.7 1.9,0.7 2.7,0 L 32.5,30 c 0.7,-0.7 0.7,-1.9 0,-2.7 L 23.3,18 32.5,8.8 c 0.7,-0.7 0.7,-1.9 0,-2.7 L 29.9,3.5 C 29.2,2.8 28,2.8 27.2,3.5 L 18,12.7 8.8,3.5 C 8.1,2.8 6.9,2.8 6.2,3.5 Z"
+           id="close_1_"
+           style="fill:#b3b3b3" /></g></g></g><style
+     type="text/css"
+     id="style2449">
+	.st0{fill:#222A30;}
+	.st1{fill:none;stroke:#222A30;stroke-width:2.0101;stroke-linejoin:round;stroke-miterlimit:10;}
+	.st2{fill:#171715;}
+	.st3{fill-rule:evenodd;clip-rule:evenodd;fill:#222A30;}
+</style></svg>
