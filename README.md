@@ -4,6 +4,8 @@ The project depends on:
   1. SVGIconImageList (GetIt)
   2. VirtualTree (GetIt)
 
+TODO: Identify and display process names in logs by their PID
+
 After installing the package, you can find the tool in the menu:
   View->Tool Windows->Android Logcat
 
