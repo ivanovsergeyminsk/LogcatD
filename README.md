@@ -28,4 +28,4 @@ Terms with the same key commbine with OR "*tag:foo tag:bar*" means "foo OR bar".
 
 Negated terms combine with AND "*-tag:foo -tag:bar*" means "!foo AND !bar"
 
-You can combine keys: -level:i -package:libc tag:native
+You can combine keys: *-level:i -package:libc tag:native*
