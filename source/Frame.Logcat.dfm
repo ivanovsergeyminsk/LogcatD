@@ -61,7 +61,7 @@ object FrameLogcat: TFrameLogcat
       RightButton.Visible = True
       ShowHint = True
       TabOrder = 0
-      TextHint = 'pid:<filter> app:<filter> tag:<filter> text:<filter>'
+      TextHint = 'pid:<filter> package:<filter> tag:<filter> message:<filter>'
       OnChange = ButtonedEditFIlterChange
       ExplicitHeight = 23
     end

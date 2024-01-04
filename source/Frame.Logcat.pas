@@ -204,10 +204,11 @@ begin
   FMRW.BeginWrite;
   try
     FreeAndNil(FFilters);
-    RefreshVirtualTreeByFilters;
   finally
     FMRW.EndWrite;
   end;
+
+  RefreshVirtualTreeByFilters;
 end;
 
 procedure TFrameLogcat.ActionClearFiltersUpdate(Sender: TObject);
