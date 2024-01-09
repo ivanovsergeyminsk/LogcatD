@@ -7,7 +7,7 @@ The project depends on:
 After installing the package, you can find the tool in the menu:
   View->Tool Windows->Android Logcat
 
-![image](https://github.com/ivanovsergeyminsk/LogcatD/assets/25233737/b72d78b3-3e81-46d0-8ca0-c37504262117)
+![image](https://github.com/ivanovsergeyminsk/LogcatD/assets/25233737/a453a3f7-280f-4a32-a872-1311de26f2d5)
 
 You can use the following filters:
 | Key      | Description                  |
