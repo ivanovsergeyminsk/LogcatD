@@ -27,3 +27,7 @@ Terms with the same key commbine with OR "*tag:foo tag:bar*" means "foo OR bar".
 Negated terms combine with AND "*-tag:foo -tag:bar*" means "!foo AND !bar"
 
 You can combine keys: *-level:i -package:libc tag:native*
+
+```
+TODO: Define a limit on the number of stored messages in memory
+```
