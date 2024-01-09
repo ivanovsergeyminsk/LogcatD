@@ -90,7 +90,7 @@ type
 
     CS_SOFTWRAP = 140;
 
-    DEFAULT_FILTER = '-package=:adbd -package=:netd';
+    DEFAULT_FILTER = '-tag=:adb_services -package=:netd';
   private
     FBridge: TAndroidDebugBridge;
 
