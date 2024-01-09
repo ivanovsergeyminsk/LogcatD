@@ -89,6 +89,8 @@ type
     COLUMN_TXT  = 6;
 
     CS_SOFTWRAP = 140;
+
+    DEFAULT_FILTER = '-package=:adbd -package=:netd';
   private
     FBridge: TAndroidDebugBridge;
 
@@ -119,6 +121,8 @@ type
 
     function GetDisplayTextDevice(Device: IDevice): string;
     procedure DoMenuItemDeviceClick(Sender: TObject);
+
+    function GetDefaultFilter: TList<TLogcatFilter>;
   private
     //IDeviceChangeListener
     procedure DeviceConnected(Device: IDevice);
@@ -424,6 +428,8 @@ begin
   FMapMenuItemDevice := TDictionary<TMenuItem, IDevice>.Create;
   FLogList := TList<TLogcatMessage>.Create;
 
+  FFilters := GetDefaultFilter;
+
   TAndroidDebugBridge.InitIfNeeded(true);
   TAndroidDebugBridge.AddDeviceChangeListener(self);
 
@@ -458,7 +464,7 @@ end;
 procedure TFrameLogcat.ButtonedEditFilterChange(Sender: TObject);
 begin
   FreeAndNil(FFilters);
-  var FilterText: string := ButtonedEditFilter.Text;
+  var FilterText: string := DEFAULT_FILTER +' '+ ButtonedEditFilter.Text;
   var LogLevel: TLogLevel := TLogLevel(ifthen(ComboboxLevel.ItemIndex = 0, 0, ComboboxLevel.ItemIndex+1));
 
   FFilters := TLogcatFilter.FromString(FilterText, LogLevel);
@@ -595,6 +601,11 @@ begin
   VirtualStringLogcat.Header.Columns.Items[COLUMN_TXT].MaxWidth := max(VirtualStringLogcat.Header.Columns.Items[COLUMN_TXT].MaxWidth, TextW+1);
   VirtualStringLogcat.Header.Columns.Items[COLUMN_TXT].Width := max(VirtualStringLogcat.Header.Columns.Items[COLUMN_TXT].Width, TextW);
   Node.NodeHeight := TextH+VirtualStringLogcat.TextMargin;
+end;
+
+function TFrameLogcat.GetDefaultFilter: TList<TLogcatFilter>;
+begin
+  result := TLogcatFilter.FromString(DEFAULT_FILTER, TLogLevel.NONE)
 end;
 
 function TFrameLogcat.GetDisplayTextDevice(Device: IDevice): string;
