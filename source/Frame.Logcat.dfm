@@ -144,7 +144,7 @@ object FrameLogcat: TFrameLogcat
     TabOrder = 1
     object SpeedButtonStartStop: TSpeedButton
       Left = 1
-      Top = 41
+      Top = 81
       Width = 39
       Height = 40
       Action = ActionStartStop
@@ -167,7 +167,7 @@ object FrameLogcat: TFrameLogcat
     end
     object SpeedButtonAutoScroll: TSpeedButton
       Left = 1
-      Top = 81
+      Top = 121
       Width = 39
       Height = 40
       Action = ActionAutoScroll
@@ -180,7 +180,7 @@ object FrameLogcat: TFrameLogcat
     end
     object SpeedButtonSoftWrap: TSpeedButton
       Left = 1
-      Top = 121
+      Top = 161
       Width = 39
       Height = 40
       Action = ActionSoftWrap
@@ -189,10 +189,11 @@ object FrameLogcat: TFrameLogcat
       ParentShowHint = False
       ShowHint = True
       ExplicitLeft = -1
+      ExplicitTop = 121
     end
     object SpeedButtonTakeScreenshot: TSpeedButton
       Left = 1
-      Top = 161
+      Top = 201
       Width = 39
       Height = 40
       Action = ActionTakeScreenshot
@@ -205,7 +206,7 @@ object FrameLogcat: TFrameLogcat
     end
     object SpeedButtonRecordScreen: TSpeedButton
       Left = 1
-      Top = 201
+      Top = 241
       Width = 39
       Height = 40
       Hint = 'Record Screen'
@@ -218,6 +219,19 @@ object FrameLogcat: TFrameLogcat
       Visible = False
       ExplicitLeft = -1
       ExplicitTop = 247
+    end
+    object SpeedButtonRestart: TSpeedButton
+      Left = 1
+      Top = 41
+      Width = 39
+      Height = 40
+      Action = ActionRestart
+      Align = alTop
+      Images = DMLogcat.SVGIconImageList
+      ParentShowHint = False
+      ShowHint = True
+      ExplicitLeft = 5
+      ExplicitTop = 35
     end
   end
   object VirtualStringLogcat: TVirtualStringTree
@@ -235,11 +249,11 @@ object FrameLogcat: TFrameLogcat
     Colors.FocusedSelectionColor = 14581296
     Colors.FocusedSelectionBorderColor = 14581296
     Colors.GridLineColor = 2697513
-    Colors.HeaderHotColor = clBlack
+    Colors.HeaderHotColor = clWhite
     Colors.HotColor = 15987699
     Colors.SelectionRectangleBlendColor = 14581296
     Colors.SelectionRectangleBorderColor = 14581296
-    Colors.SelectionTextColor = clBlack
+    Colors.SelectionTextColor = clWhite
     Colors.TreeLineColor = 9471874
     Colors.UnfocusedColor = clGray
     Colors.UnfocusedSelectionColor = 2368548
@@ -355,6 +369,11 @@ object FrameLogcat: TFrameLogcat
       Caption = 'Save to...'
       Hint = 'Save to File'
       OnExecute = ActionSaveToFileExecute
+    end
+    object ActionRestart: TAction
+      Hint = 'Restart Logcat'
+      ImageIndex = 14
+      OnExecute = ActionRestartExecute
     end
   end
   object PopupMenuTree: TPopupMenu

@@ -9,6 +9,7 @@ uses
   {$IFDEF BPL}
   , ToolsAPI
   {$ENDIF}
+  , adb.AndroidDebugBridge
   ;
 
 type
@@ -24,6 +25,7 @@ type
     procedure DataModuleCreate(Sender: TObject);
     procedure ActionAndroidMonitorExecute(Sender: TObject);
   private
+    FBridge: TAndroidDebugBridge;
   {$IFDEF BPL}
     { Private declarations }
     procedure InjectMenu;
@@ -60,14 +62,68 @@ implementation
 
 {$R *.dfm}
 
-{$IFDEF BPL}
 uses
-    VCL.Dialogs
+    System.Win.Registry
+  , Winapi.Windows
+  {$IFDEF BPL}
+  , VCL.Dialogs
   , VCL.Menus
   , Form.Logcat
   , Form.Logcat.TakeScreenshot
+  {$ENDIF}
   ;
 
+function TryGetAdbLocation(out adbOsLocale: string): boolean;
+  const BDSKey = 'Software\Embarcadero\BDS\';
+  const PlatformSDKKey = '\PlatformSDKs\';
+begin
+  adbOsLocale := string.Empty;
+  var Registry := TRegistry.Create(KEY_READ);
+  try
+    Registry.RootKey := HKEY_CURRENT_USER;
+
+    // False because we do not want to create it if it doesn't exist
+    if not Registry.OpenKey(BDSKey, False) then
+      exit(false);
+
+    var VerN := TStringList.Create;
+    try
+      Registry.GetKeyNames(VerN);
+      for var KeyVer in VerN do
+      begin
+        if not Registry.OpenKey(KeyVer+PlatformSDKKey, false) then
+          continue;
+
+        var PlatformN := TStringList.Create;
+        try
+          Registry.GetKeyNames(PlatformN);
+          for var PlatfVer in PlatformN do
+          begin
+            if not Registry.OpenKey(PlatfVer, false) then
+              continue;
+
+            if Registry.ValueExists('SDKAdbPath') then
+            begin
+              adbOsLocale := Registry.ReadString('SDKAdbPath');
+              if not adbOsLocale.Trim.IsEmpty then
+                exit(true);
+            end;
+          end;
+        finally
+          PlatformN.Free;
+        end;
+    end;
+   finally
+    VerN.Free;
+   end;
+
+    result := not adbOsLocale.Trim.IsEmpty;
+  finally
+   Registry.Free;
+  end;
+end;
+
+{$IFDEF BPL}
 var
   DMLogcat: TDMLogcat;
 
@@ -160,6 +216,12 @@ end;
 
 procedure TDMLogcat.DataModuleCreate(Sender: TObject);
 begin
+  TAndroidDebugBridge.InitIfNeeded(true);
+
+  var adbOsLocale: string;
+  if TryGetAdbLocation(adbOsLocale) then
+    TAndroidDebugBridge.CreateBridge(adbOsLocale, false);
+
   {$IFDEF BPL}
   InjectMenu;
   RegisterFormIDE;
@@ -168,6 +230,8 @@ end;
 
 procedure TDMLogcat.DataModuleDestroy(Sender: TObject);
 begin
+  TAndroidDebugBridge.Terminate;
+
   {$IFDEF BPL}
 //  FreeAndNil(FormLogcat);
   {$ENDIF}

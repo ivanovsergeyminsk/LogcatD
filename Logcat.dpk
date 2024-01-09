@@ -58,6 +58,8 @@ contains
   System.Types.Nullable in 'source\System.Types.Nullable.pas',
   Form.Logcat.TakeScreenshot in 'source\Form.Logcat.TakeScreenshot.pas' {FormTakeScreenshot},
   adb.RawImage in 'source\adb.RawImage.pas',
-  adb.Receiver.PSReceiver in 'source\adb.Receiver.PSReceiver.pas';
+  adb.Receiver.PSReceiver in 'source\adb.Receiver.PSReceiver.pas',
+  System.TabControlStyleBtnClose in 'source\System.TabControlStyleBtnClose.pas',
+  System.Utility.IntAllocator in 'source\System.Utility.IntAllocator.pas';
 
 end.

@@ -337,6 +337,7 @@ type
     ///</summary>
     procedure RemoveForward(LocalPort: integer; RemoteSocketName: string; Namespace: TDeviceUnixSocketNamespace); overload;
 
+    function GetClients: TArray<TPair<integer, string>>;
     ///<summary>
     /// Returns the name of the client by pid or <code>null</code> if pid is unknown
     /// @param pid the pid of the client.

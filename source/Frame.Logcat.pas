@@ -55,6 +55,8 @@ type
     ActionTakeScreenshot: TAction;
     ActionSoftWrap: TAction;
     ComboBoxDevices: TComboBox;
+    ActionRestart: TAction;
+    SpeedButtonRestart: TSpeedButton;
     procedure ImageDeviceClick(Sender: TObject);
     procedure VirtualStringLogcatGetText(Sender: TBaseVirtualTree;
       Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
@@ -79,6 +81,7 @@ type
     procedure ComboBoxDevicesDropDown(Sender: TObject);
     procedure ComboBoxDevicesSelect(Sender: TObject);
     procedure ComboBoxDevicesCloseUp(Sender: TObject);
+    procedure ActionRestartExecute(Sender: TObject);
   private const
     COLUMN_TIME = 0;
     COLUMN_PID  = 1;
@@ -90,10 +93,8 @@ type
 
     CS_SOFTWRAP = 140;
 
-    DEFAULT_FILTER = '-tag=:adb_services -package=:netd';
+    DEFAULT_FILTER = '-package=:adbd -package=:netd';
   private
-    FBridge: TAndroidDebugBridge;
-
     FMapDeviceMenuItem: TDictionary<IDevice, TMenuItem>;
     FMapMenuItemDevice: TDictionary<TMenuItem, IDevice>;
 
@@ -143,60 +144,6 @@ type
 implementation
 
 {$R *.dfm}
-
-uses
-    System.Win.Registry
-  ;
-
-function TryGetAdbLocation(out adbOsLocale: string): boolean;
-  const BDSKey = 'Software\Embarcadero\BDS\';
-  const PlatformSDKKey = '\PlatformSDKs\';
-begin
-  adbOsLocale := string.Empty;
-  var Registry := TRegistry.Create(KEY_READ);
-  try
-    Registry.RootKey := HKEY_CURRENT_USER;
-
-    // False because we do not want to create it if it doesn't exist
-    if not Registry.OpenKey(BDSKey, False) then
-      exit(false);
-
-    var VerN := TStringList.Create;
-    try
-      Registry.GetKeyNames(VerN);
-      for var KeyVer in VerN do
-      begin
-        if not Registry.OpenKey(KeyVer+PlatformSDKKey, false) then
-          continue;
-
-        var PlatformN := TStringList.Create;
-        try
-          Registry.GetKeyNames(PlatformN);
-          for var PlatfVer in PlatformN do
-          begin
-            if not Registry.OpenKey(PlatfVer, false) then
-              continue;
-
-            if Registry.ValueExists('SDKAdbPath') then
-            begin
-              adbOsLocale := Registry.ReadString('SDKAdbPath');
-              if not adbOsLocale.Trim.IsEmpty then
-                exit(true);
-            end;
-          end;
-        finally
-          PlatformN.Free;
-        end;
-    end;
-   finally
-    VerN.Free;
-   end;
-
-    result := not adbOsLocale.Trim.IsEmpty;
-  finally
-   Registry.Free;
-  end;
-end;
 
 
 { TFrameLogcat }
@@ -308,6 +255,11 @@ begin
   end;
 end;
 
+procedure TFrameLogcat.ActionRestartExecute(Sender: TObject);
+begin
+  TAndroidDebugBridge.GetBridge.Restart;
+end;
+
 procedure TFrameLogcat.ActionSaveToFileExecute(Sender: TObject);
 begin
   var Logs: TArray<TLogcatMessage>;
@@ -362,6 +314,7 @@ begin
   FTaskLogcat := TTask.Run(
     procedure
     begin
+      TThread.CurrentThread.NameThreadForDebugging('[RUNNING] Task Logcat');
       try
         FLogcat.Run;
       except
@@ -370,6 +323,7 @@ begin
           LogStop;
         end;
       end;
+      TThread.CurrentThread.NameThreadForDebugging('[FINISHED] Task Logcat');
     end);
 end;
 
@@ -430,14 +384,7 @@ begin
 
   FFilters := GetDefaultFilter;
 
-  TAndroidDebugBridge.InitIfNeeded(true);
   TAndroidDebugBridge.AddDeviceChangeListener(self);
-
-  var adbOsLocale: string;
-  if TryGetAdbLocation(adbOsLocale) then
-    FBridge := TAndroidDebugBridge.CreateBridge(adbOsLocale, false)
-  else
-    FBridge := nil;
 end;
 
 procedure TFrameLogcat.BeforeDestruction;
@@ -448,11 +395,8 @@ begin
     TTask.WaitForAll([FTaskLogcat]);
   end;
 
-  if assigned(FBridge) then
-    FBridge.Stop;
-
   TAndroidDebugBridge.RemoveDeviceChangeListener(self);
-  TAndroidDebugBridge.Terminate;
+
   FLogList.Free;
   FMapDeviceMenuItem.Free;
   FMapMenuItemDevice.Free;
@@ -663,6 +607,9 @@ begin
       var NeedCount := FLogList.Count - VirtualStringLogcat.RootNode.ChildCount;
       for var I := 0 to NeedCount-1 do
       begin
+        if not FIsStartedLog then
+          break;
+
         var Node: PVirtualNode := VirtualStringLogcat.AddChild(nil);
 
         Exclude(Node.States, vsFiltered);
@@ -692,8 +639,8 @@ begin
   FIsStartedLog := false;
   if assigned(FLogcat) then
   begin
-    FLogcat.RemoveLogcatListener(self);
     FLogcat.Stop;
+    FLogcat.RemoveLogcatListener(self);
   end;
 end;
 

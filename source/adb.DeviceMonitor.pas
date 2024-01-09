@@ -17,6 +17,7 @@ uses
   , adb.Protocol
   , adb.Receiver.MultiLineReceiver
   , adb.Receiver.GetPropReceiver
+  , adb.Receiver.PSReceiver
   ;
 
 type
@@ -86,6 +87,11 @@ type
     ///<sumamry>
     procedure ProcessIncomingDeviceData(ALength: integer);
     procedure HandleExpectionInMonitorLoop(E: Exception);
+  private
+    FProcessesMonitors: TDictionary<IDevice, ITask>;
+    procedure ProcessMonitorLoop(Device: IDevice);
+    procedure StartProcessesMonitoring(Device: IDevice);
+    procedure StopProcessesMonitoring(Device: IDevice);
   public
     ///<summary>
     /// Creates a new {@link DeviceMonitor} object and links it to the running
@@ -134,11 +140,13 @@ begin
   FRestartAttemptCount := 0;
   FInitialDeviceListDone := false;
   FDevices := TList<IDevice>.Create;
+  FProcessesMonitors := TDictionary<IDevice, ITask>.Create;
   FServer := Server;
 end;
 
 destructor TDeviceMonitor.Destroy;
 begin
+  FProcessesMonitors.Free;
   FDevices.Free;
   FQuit.Free;
   inherited;
@@ -325,6 +333,63 @@ begin
 end;
 
 
+procedure TDeviceMonitor.ProcessMonitorLoop(Device: IDevice);
+begin
+  while FQuit.WaitFor(1000) <> wrSignaled do
+  begin
+    try
+      TTask.CurrentTask.CheckCanceled;
+    except
+      on E: EOperationCancelled do
+        break;
+    end;
+
+    if Device.GetState <> TDeviceState.ONLINE then
+      continue;
+
+    var RecentData := TDictionary<integer, string>.Create;
+    try
+      try
+        TDevice(Device).ExecuteShellCommand(TPSReceiver.PS_COMMAND, TPSReceiver.Create(
+          procedure(const [ref] AData: TPair<integer, string>)
+          begin
+            RecentData.AddOrSetValue(AData.Key, AData.Value);
+            TTask.CurrentTask.CheckCanceled;
+          end
+        ),
+        1000
+        );
+      except
+        on E: EOperationCancelled do
+          break;
+        on E: Exception do
+          continue;
+      end;
+
+      try
+        var OldData := Device.GetClients;
+        for var Data in OldData do
+        begin
+          TTask.CurrentTask.CheckCanceled;
+          if not RecentData.ContainsKey(Data.Key) then
+              TDevice(Device).RemoveClientInfo(Data.Key);
+        end;
+
+        for var Data in RecentData do
+        begin
+          TTask.CurrentTask.CheckCanceled;
+          TDevice(Device).SetClientInfo(Data.Key, Data.Value);
+        end;
+      except
+        on E: EOperationCancelled do
+          break;
+      end;
+    finally
+      RecentData.Free;
+    end;
+  end;
+end;
+
 procedure TDeviceMonitor.QueryNewDeviceForInfo(Device: IDevice);
 begin
 //  exit;
@@ -454,11 +519,27 @@ begin
   FDeviceMonitorLoop := TTask.Run(
     procedure
     begin
-      TThread.CurrentThread.NameThreadForDebugging('Device List Monitor');
+      TThread.CurrentThread.NameThreadForDebugging('[RUNNING] Device List Monitor');
       DeviceMonitorLoop;
+      TThread.CurrentThread.NameThreadForDebugging('[FINISHED] Device List Monitor');
     end,
     TAndroidDebugBridge.GetThreadPool
   );
+end;
+
+procedure TDeviceMonitor.StartProcessesMonitoring(Device: IDevice);
+begin
+  var Task := TTask.Run(
+    procedure
+    begin
+      TThread.CurrentThread.NameThreadForDebugging('[RUNNING] Device Process Monitor');
+      ProcessMonitorLoop(Device);
+      TThread.CurrentThread.NameThreadForDebugging('[FINISHED] Device Process Monitor');
+    end,
+    TAndroidDebugBridge.GetThreadPool
+    );
+
+  FProcessesMonitors.Add(Device, Task);
 end;
 
 procedure TDeviceMonitor.Stop;
@@ -476,6 +557,20 @@ begin
   end;
 
   TTask.WaitForAll([FDeviceMonitorLoop]);
+
+  var Monitors := FProcessesMonitors.Values.ToArray;
+  for var Monitor in Monitors do
+    Monitor.Cancel;
+
+  TTask.WaitForAll(Monitors);
+  FProcessesMonitors.Clear;
+end;
+
+procedure TDeviceMonitor.StopProcessesMonitoring(Device: IDevice);
+begin
+  var ProcessMonitor := FProcessesMonitors.ExtractPair(Device);
+  ProcessMonitor.Value.Cancel;
+  TTask.WaitForAll([ProcessMonitor.Value]);
 end;
 
 procedure TDeviceMonitor.UpdateDevices(NewList: TList<IDevice>);
@@ -525,11 +620,6 @@ begin
 
               if Device.IsOnline then
               begin
-                if TAndroidDebugBridge.GetClientSupport then
-                begin
-//                  if not StartMonitoringDevice(Device) then
-//                    TDebug.WriteLine('"E: DeviceMonitor" Failed to start monitoring '+Device.GetSerialNumber);
-                end;
 
                 if Device.GetPropertyCount = 0 then
                   DevicesToQuery := DevicesToQuery + [Device];
@@ -546,6 +636,7 @@ begin
         begin
           // the device is gone, we need to remove it, and keep current index
           // to process the next one.
+          StopProcessesMonitoring(Device);
           RemoveDevice(Device);
           FServer.DeviceDisconnected(Device);
         end;
@@ -560,11 +651,7 @@ begin
         FServer.DeviceConnected(NewDevice);
 
         // start monitoring them.
-        if TAndroidDebugBridge.GetClientSupport then
-        begin
-//          if NewDevice.IsOnline then
-//            StartMonitoringDevice(NewDevice);
-        end;
+        StartProcessesMonitoring(NewDevice);
 
         // look for their build info.
         if NewDevice.IsOnline then

@@ -22,7 +22,6 @@ uses
   , adb.Receiver.MultiLineReceiver
   , adb.Receiver.CollectingOutputReceiver
   , adb.Receiver.NullOutputReceiver
-  , adb.Receiver.PSReceiver
   , Common.Debug
   ;
 
@@ -43,7 +42,6 @@ type
     FProperties: TDictionary<string, string>;
     FProcessInfo: TDictionary<integer, string>;
     FMREWProcessInfo: TLightweightMREW;
-    FReleaseEvent: TEvent;
 
     FArePropertiesSet: boolean;
     FLastBatteryLevel: Nullable<integer>;
@@ -52,16 +50,13 @@ type
     procedure ClearClientInfo;
     procedure AddClientInfo(Client: IClient);
     procedure UpdateClientInfo(Client: IClient; Change: TClientChanges);
-
-  private
-    FProcessMonitorLoop: ITask;
-    procedure ProcessMonitorLoop;
   public
     procedure SetState(Value: TDeviceState);
     procedure Update(Change: TDeviceChanges); overload;
     procedure ExecuteShellCommand(Command: string; Receiver: IShellOutputReceiver; MaxTimeToOutputResponse: integer); overload;
     procedure AddProperty(ALabel, AValue: string);
     procedure SetClientInfo(Pid: integer; PkgName: string);
+    procedure RemoveClientInfo(Pid: integer);
   public
     constructor Create(Monitor: TDeviceMonitor; SerialNumber: string; DeviceState: TDeviceState);
     destructor Destroy; override;
@@ -88,6 +83,7 @@ type
     procedure CreateForward(LocalPort: integer; RemoteSocketName: string; Namespace: TDeviceUnixSocketNamespace); overload;
     procedure RemoveForward(LocalPort, RemotePort: integer); overload;
     procedure RemoveForward(LocalPort: integer; RemoteSocketName: string; Namespace: TDeviceUnixSocketNamespace); overload;
+    function GetClients: TArray<TPair<integer, string>>;
     function GetClientName(Pid: integer): string;
     procedure Reboot(Into: string);
     function GetBatteryLevel: integer; overload;
@@ -251,11 +247,6 @@ begin
   FArePropertiesSet     := false;
   FLastBatteryLevel     := nil;
   FLastBatteryCheckTime := 0;
-
-  FReleaseEvent := TEvent.Create;
-  FReleaseEvent.ResetEvent;
-
-  FProcessMonitorLoop := TTask.Run(ProcessMonitorLoop);
 end;
 
 procedure TDevice.CreateForward(LocalPort: integer; RemoteSocketName: string; Namespace: TDeviceUnixSocketNamespace);
@@ -270,22 +261,10 @@ end;
 
 destructor TDevice.Destroy;
 begin
-  TThread.ForceQueue(nil,
-    procedure
-    begin
-      FReleaseEvent.SetEvent;
-
-      if assigned(FProcessMonitorLoop) then
-        TTask.WaitForAll([FProcessMonitorLoop]);
-
-      FProcessMonitorLoop := nil;
-      FReleaseEvent.Free;
-      FProperties.Free;
-      FProcessInfo.Free;
-      FMonitor := nil;
-      inherited;
-    end
-  )
+  FProperties.Free;
+  FProcessInfo.Free;
+  FMonitor := nil;
+  inherited;
 end;
 
 procedure TDevice.ExecuteShellCommand(Command: string; Receiver: IShellOutputReceiver; MaxTimeToOutputResponse: integer);
@@ -339,6 +318,16 @@ begin
   end;
 end;
 
+
+function TDevice.GetClients: TArray<TPair<integer, string>>;
+begin
+  FMREWProcessInfo.BeginRead;
+  try
+    result := FProcessInfo.ToArray;
+  finally
+    FMREWProcessInfo.EndRead;
+  end;
+end;
 
 function TDevice.GetBatteryLevel: integer;
 begin
@@ -429,50 +418,20 @@ begin
   result := FState = TDeviceState.ONLINE;
 end;
 
-procedure TDevice.ProcessMonitorLoop;
-begin
-  while FReleaseEvent.WaitFor(5000) <> wrSignaled do
-  begin
-    if GetState <> TDeviceState.ONLINE then
-      break;
-
-    var RecentData := TDictionary<integer, string>.Create;
-    try
-      try
-      ExecuteShellCommand(TPSReceiver.PS_COMMAND, TPSReceiver.Create(
-        procedure(const [ref] AData: TPair<integer, string>)
-        begin
-          RecentData.AddOrSetValue(AData.Key, AData.Value);
-        end
-      ));
-      except
-        on E: Exception do
-          continue;
-      end;
-
-      FMREWProcessInfo.BeginWrite;
-      try
-        var OldData := FProcessInfo.ToArray;
-        for var Data in OldData do
-          if not RecentData.ContainsKey(Data.Key) then
-            FProcessInfo.Remove(Data.Key);
-
-        for var Data in RecentData do
-          FProcessInfo.AddOrSetValue(Data.Key, Data.Value);
-
-      finally
-        FMREWProcessInfo.EndWrite;
-      end;
-
-    finally
-      RecentData.Free;
-    end;
-  end;
-end;
-
 procedure TDevice.Reboot(Into: string);
 begin
   TAdbHelper.Reboot(Into, TAndroidDebugBridge.GetSocketAddress, self);
+end;
+
+procedure TDevice.RemoveClientInfo(Pid: integer);
+begin
+  FMREWProcessInfo.BeginWrite;
+  try
+    if FProcessInfo.ContainsKey(Pid) then
+      FProcessInfo.Remove(Pid);
+  finally
+    FMREWProcessInfo.EndWrite;
+  end;
 end;
 
 procedure TDevice.RemoveForward(LocalPort: integer; RemoteSocketName: string;

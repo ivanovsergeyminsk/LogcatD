@@ -192,6 +192,8 @@
         </DCCReference>
         <DCCReference Include="source\adb.RawImage.pas"/>
         <DCCReference Include="source\adb.Receiver.PSReceiver.pas"/>
+        <DCCReference Include="source\System.TabControlStyleBtnClose.pas"/>
+        <DCCReference Include="source\System.Utility.IntAllocator.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
