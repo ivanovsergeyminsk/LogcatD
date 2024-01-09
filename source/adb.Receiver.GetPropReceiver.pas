@@ -4,6 +4,7 @@ interface
 
 uses
     System.RegularExpressions
+  , System.Diagnostics
   , adb.AndroidDebugBridge
   , adb.Receiver.MultiLineReceiver
   ;
@@ -23,11 +24,15 @@ type
     /// indicates if we need to read the first
     FDevice: IDevice;
     FGetPropPattern: TRegEx;
+    FIsCancelled: boolean;
+
+    SW: TStopwatch;
   public
     constructor Create(Device: IDevice);
 
     procedure ProcessNewLines(const [ref] Lines: TArray<string>); override;
     function IsCancelled: boolean; override;
+    procedure Flush; override;
     procedure Done; override;
   end;
 
@@ -44,6 +49,7 @@ constructor TGetPropReceiver.Create(Device: IDevice);
 begin
   inherited Create;
 
+  FIsCancelled := false;
   FDevice := Device;
   FGetPropPattern := TRegEx.Create(RX_GETPROP, [roNotEmpty, roCompiled]);
 end;
@@ -53,13 +59,30 @@ begin
   TDevice(FDevice).Update([TDeviceChange.ChangeBuildInfo]);
 end;
 
+procedure TGetPropReceiver.Flush;
+begin
+  if SW.IsRunning then
+  begin
+    FIsCancelled := SW.ElapsedMilliseconds > 1000;
+  end
+  else
+  begin
+    SW.Reset;
+    SW.Start;
+    FIsCancelled := false;
+  end;
+end;
+
 function TGetPropReceiver.IsCancelled: boolean;
 begin
-  result := false;
+  result := FIsCancelled;
 end;
 
 procedure TGetPropReceiver.ProcessNewLines(const [ref] Lines: TArray<string>);
 begin
+  SW.Stop;
+  SW.Reset;
+
   // We receive an array of lines. We're expecting
   // to have the build info in the first line, and the build
   // date in the 2nd line. There seems to be an empty line

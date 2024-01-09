@@ -204,7 +204,7 @@ type
 
   TLogcatReceiverTask = class(TInterfacedObject, ILogcatReceiverTask)
   private const
-    LOGCAT_COMMAND = 'logcat -v long';
+    LOGCAT_COMMAND = 'logcat -c; logcat -v long';
     DEVICE_POOL_INTERVAL_MSEC = 1000;
   private
     class var DeviceDisconnectedMsg : TLogcatMessage;

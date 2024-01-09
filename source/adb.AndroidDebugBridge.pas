@@ -230,13 +230,6 @@ type
     ///</summary>
     function GetPropertyCacheOrSync(Name: string): string;
 
-    /// Returns a mount point.
-    /// @param name the name of the mount point to return
-    /// @see #MNT_EXTERNAL_STORAGE
-    /// @see #MNT_ROOT
-    /// @see #MNT_DATA
-    function GetMountPoint(Name: string): string;
-
     ///<summary>
     /// Returns if the device is ready.
     /// @return <code>true</code> if {@link #getState()} returns {@link DeviceState#ONLINE}.

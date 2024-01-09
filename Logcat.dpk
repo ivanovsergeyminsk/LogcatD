@@ -57,6 +57,7 @@ contains
   System.Process in 'source\System.Process.pas',
   System.Types.Nullable in 'source\System.Types.Nullable.pas',
   Form.Logcat.TakeScreenshot in 'source\Form.Logcat.TakeScreenshot.pas' {FormTakeScreenshot},
-  adb.RawImage in 'source\adb.RawImage.pas';
+  adb.RawImage in 'source\adb.RawImage.pas',
+  adb.Receiver.PSReceiver in 'source\adb.Receiver.PSReceiver.pas';
 
 end.

@@ -81,21 +81,6 @@ object FrameLogcat: TFrameLogcat
       ShowCaption = False
       TabOrder = 1
       OnClick = ImageDeviceClick
-      object LabelDevice: TLabel
-        Left = 34
-        Top = 1
-        Width = 358
-        Height = 23
-        Hint = 'Connected devices'
-        Align = alClient
-        Caption = 'Click to select a device'
-        ParentShowHint = False
-        ShowHint = True
-        Layout = tlCenter
-        OnClick = ImageDeviceClick
-        ExplicitWidth = 119
-        ExplicitHeight = 15
-      end
       object SVGIconImageOnline: TSVGIconImage
         Left = 1
         Top = 1
@@ -104,6 +89,18 @@ object FrameLogcat: TFrameLogcat
         AutoSize = False
         ImageList = DMLogcat.SVGIconImageList
         Align = alLeft
+      end
+      object ComboBoxDevices: TComboBox
+        Left = 34
+        Top = 1
+        Width = 358
+        Height = 23
+        Align = alClient
+        Style = csDropDownList
+        TabOrder = 0
+        OnCloseUp = ComboBoxDevicesCloseUp
+        OnDropDown = ComboBoxDevicesDropDown
+        OnSelect = ComboBoxDevicesSelect
       end
     end
     object ComboBoxLevel: TComboBox
@@ -277,7 +274,7 @@ object FrameLogcat: TFrameLogcat
       end
       item
         Position = 3
-        Text = 'AppName'
+        Text = 'Package'
         Width = 154
       end
       item

@@ -30,9 +30,6 @@ object FormLogcat: TFormLogcat
       Width = 1078
       StyleElements = [seFont, seClient, seBorder]
       ExplicitWidth = 1076
-      inherited SpeedButtonFilter: TSpeedButton
-        Glyph.Data = {00000000}
-      end
       inherited ButtonedEditFIlter: TButtonedEdit
         Width = 494
         StyleElements = [seFont, seClient, seBorder]
@@ -40,9 +37,7 @@ object FormLogcat: TFormLogcat
       end
       inherited PanelDevice: TPanel
         StyleElements = [seFont, seClient, seBorder]
-        inherited LabelDevice: TLabel
-          Width = 358
-          Height = 23
+        inherited ComboBoxDevices: TComboBox
           StyleElements = [seFont, seClient, seBorder]
         end
       end
@@ -56,47 +51,24 @@ object FormLogcat: TFormLogcat
       Height = 421
       StyleElements = [seFont, seClient, seBorder]
       ExplicitHeight = 413
-      inherited SpeedButtonStartStop: TSpeedButton
-        Glyph.Data = {00000000}
-      end
-      inherited SpeedButtonAutoScroll: TSpeedButton
-        Glyph.Data = {00000000}
-      end
-      inherited SpeedButtonTakeScreenshot: TSpeedButton
-        Glyph.Data = {00000000}
-      end
     end
     inherited VirtualStringLogcat: TVirtualStringTree
       Width = 1034
       Height = 418
-      Colors.HeaderHotColor = clBlack
       Colors.HotColor = 5658198
-      Colors.SelectionTextColor = clBlack
       Header.Background = 5658198
       ExplicitWidth = 1034
       ExplicitHeight = 418
     end
     inherited ActionListLogcat: TActionList
-      inherited ActionStartStop: TAction
-        Hint = 'Start/Stop Loging'
-      end
-      inherited ActionClearLogs: TAction
-        Hint = 'Clear Log Messages'
-      end
       inherited ActionClearFilters: TAction
         Hint = 'Clear Filters'
       end
+      inherited ActionStartStop: TAction
+        Hint = 'Start/Stop Loging'
+      end
       inherited ActionAutoScroll: TAction
         Hint = 'Autoscroll'
-      end
-      inherited ActionTakeScreenshot: TAction
-        Hint = 'Take Screenshot'
-      end
-      inherited ActionCopyLogMessages: TAction
-        Hint = 'Copy Log Messages'
-      end
-      inherited ActionSaveToFile: TAction
-        Hint = 'Save to File'
       end
     end
   end

@@ -5,7 +5,6 @@ interface
 uses
     System.Net.Socket
   , System.Net.SocketHelper
-//  , System.Net.Selector
   , System.Generics.Collections
   , System.Classes
   , System.SysUtils
@@ -62,7 +61,6 @@ type
     /// Queries a device for its build info.
     /// @param device the device to query.
     procedure QueryNewDeviceForInfo(Device: IDevice);
-    procedure QueryNewDeviceForMountingPoint(Device: IDevice; Name: string);
 
     ///<summary>Attempts to connect to the debug bridge server.</summary>
     ///<returns>A connect socket if success, nil otherwise</returns>
@@ -329,16 +327,15 @@ end;
 
 procedure TDeviceMonitor.QueryNewDeviceForInfo(Device: IDevice);
 begin
-  {$MESSAGE WARN 'TODO: implement'}
-  exit;
+//  exit;
   // TODO: do this in a separate thread.
   try
     // first get the list of properties.
     Device.ExecuteShellCommand(TGetPropReceiver.GETPROP_COMMAND, TGetPropReceiver.Create(Device));
-
-    QueryNewDeviceForMountingPoint(Device, MNT_EXTERNAL_STORAGE);
-    QueryNewDeviceForMountingPoint(Device, MNT_DATA);
-    QueryNewDeviceForMountingPoint(Device, MNT_ROOT);
+    exit;
+//    QueryNewDeviceForMountingPoint(Device, MNT_EXTERNAL_STORAGE);
+//    QueryNewDeviceForMountingPoint(Device, MNT_DATA);
+//    QueryNewDeviceForMountingPoint(Device, MNT_ROOT);
 
     // now get the emulator Virtual Device name (if applicable).
     if Device.IsEmulator then
@@ -373,26 +370,6 @@ begin
       *)
     end;
   end;
-end;
-
-procedure TDeviceMonitor.QueryNewDeviceForMountingPoint(Device: IDevice; Name: string);
-begin
-  Device.ExecuteShellCommand('echo $'+Name, TMultiLineReceiver.Construct(
-    function(): boolean
-    begin
-      result := false;
-    end,
-
-    procedure(const [ref] Lines: TArray<string>)
-    begin
-      for var Line in Lines do
-      begin
-        if not Line.IsEmpty then
-          // this should be the only one.
-          TDevice(Device).SetMountingPoint(Name, Line);
-      end;
-    end
-  ));
 end;
 
 function TDeviceMonitor.Read(Socket: TSocket; var Buffer: TArray<byte>): string;

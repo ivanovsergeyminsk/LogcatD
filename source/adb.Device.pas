@@ -11,6 +11,8 @@ uses
   , System.Net.Socket
   , System.Generics.Collections
   , System.RegularExpressions
+  , System.Process
+  , System.Threading
   , adb.AndroidDebugBridge
   , adb.AdbHelper
   , adb.Preferences
@@ -19,6 +21,8 @@ uses
   , adb.Receiver.MultiLineReceiver
   , adb.Receiver.CollectingOutputReceiver
   , adb.Receiver.NullOutputReceiver
+  , adb.Receiver.PSReceiver
+  , Common.Debug
   ;
 
 type
@@ -36,9 +40,9 @@ type
     FAvdName: string;
     FState: TDeviceState;
     FProperties: TDictionary<string, string>;
-    FMountPoints: TDictionary<string, string>;
-
-    FClientInfo: TDictionary<integer, string>;
+    FProcessInfo: TDictionary<integer, string>;
+    FMREWProcessInfo: TLightweightMREW;
+    FReleaseEvent: TEvent;
 
     FArePropertiesSet: boolean;
     FLastBatteryLevel: Nullable<integer>;
@@ -47,13 +51,16 @@ type
     procedure ClearClientInfo;
     procedure AddClientInfo(Client: IClient);
     procedure UpdateClientInfo(Client: IClient; Change: TClientChanges);
+
+  private
+    FProcessMonitorLoop: ITask;
+    procedure ProcessMonitorLoop;
   public
     procedure SetState(Value: TDeviceState);
     procedure Update(Change: TDeviceChanges); overload;
     procedure ExecuteShellCommand(Command: string; Receiver: IShellOutputReceiver; MaxTimeToOutputResponse: integer); overload;
     procedure AddProperty(ALabel, AValue: string);
     procedure SetClientInfo(Pid: integer; PkgName: string);
-    procedure SetMountingPoint(Name, Value: string);
   public
     constructor Create(Monitor: TDeviceMonitor; SerialNumber: string; DeviceState: TDeviceState);
     destructor Destroy; override;
@@ -68,7 +75,6 @@ type
     function ArePropertiesSet: boolean;
     function GetPropertySync(Name: string): string;
     function GetPropertyCacheOrSync(Name: string): string;
-    function GetMountPoint(Name: string): string;
     function IsOnline: boolean;
     function IsEmulator: boolean;
     function IsOffline: boolean;
@@ -223,7 +229,12 @@ end;
 
 procedure TDevice.ClearClientInfo;
 begin
-  FClientInfo.Clear;
+  FMREWProcessInfo.BeginWrite;
+  try
+    FProcessInfo.Clear;
+  finally
+    FMREWProcessInfo.EndWrite;
+  end;
 end;
 
 constructor TDevice.Create(Monitor: TDeviceMonitor; SerialNumber: string;
@@ -234,12 +245,16 @@ begin
   FState        := DeviceState;
 
   FProperties   := TDictionary<string, string>.Create;
-  FMountPoints  := TDictionary<string, string>.Create;
-  FClientInfo   := TDictionary<integer, string>.Create;
+  FProcessInfo   := TDictionary<integer, string>.Create;
 
   FArePropertiesSet     := false;
   FLastBatteryLevel     := nil;
   FLastBatteryCheckTime := 0;
+
+  FReleaseEvent := TEvent.Create;
+  FReleaseEvent.ResetEvent;
+
+  FProcessMonitorLoop := TTask.Run(ProcessMonitorLoop);
 end;
 
 procedure TDevice.CreateForward(LocalPort: integer; RemoteSocketName: string; Namespace: TDeviceUnixSocketNamespace);
@@ -254,9 +269,15 @@ end;
 
 destructor TDevice.Destroy;
 begin
+  FReleaseEvent.SetEvent;
+
+  if assigned(FProcessMonitorLoop) then
+    TTask.WaitForAll([FProcessMonitorLoop]);
+
+  FProcessMonitorLoop := nil;
+  FReleaseEvent.Free;
   FProperties.Free;
-  FMountPoints.Free;
-  FClientInfo.Free;
+  FProcessInfo.Free;
   FMonitor := nil;
   inherited;
 end;
@@ -290,28 +311,33 @@ begin
   result := FLastBatteryLevel.Value;
 end;
 
-
 function TDevice.GetClientName(Pid: integer): string;
-//\w+\s+(?<pid>\d+)\s+\d+\s+\d+\s+\d+\s+[\d\w]+\s+\d+\s+\w\s+(?<name>.+)
 begin
-//  ClearClientInfo;
+//  var RecentData: string := UNKNOWN_PACKAGE;
+//  ExecuteShellCommand(format(TPSReceiver.PS_COMMAND_PID, [Pid]), TPSReceiver.Create(self,
+//    procedure(const [ref] AData: TPair<integer, string>)
+//    begin
+//      RecentData := AData.Value;
+////      TDebug.WriteLine('"W: ProcessMonitorLoop" '+AData.Key.ToString+':'+Adata.Value);
+//    end
+//  ));
 
-//  ExecuteShellCommand('ps '{-p '+pid.ToString}, TPSReceiver.Create(self));
+//  result := RecentData;
 
-  if not FClientInfo.TryGetValue(pid, result) then
-    result := UNKNOWN_PACKAGE;
+  FMREWProcessInfo.BeginRead;
+  try
+    if not FProcessInfo.TryGetValue(pid, result) then
+      result := UNKNOWN_PACKAGE;
+  finally
+    FMREWProcessInfo.EndRead;
+  end;
 end;
+
 
 function TDevice.GetBatteryLevel: integer;
 begin
   // use default of 5 minutes
   result := GetBatteryLevel(5 * 60 * 1000);
-end;
-
-function TDevice.GetMountPoint(Name: string): string;
-begin
-  if not FMountPoints.TryGetValue(Name, Result) then
-    result := string.Empty;
 end;
 
 function TDevice.GetProperties: TDictionary<string, string>;
@@ -397,6 +423,42 @@ begin
   result := FState = TDeviceState.ONLINE;
 end;
 
+procedure TDevice.ProcessMonitorLoop;
+begin
+  while FReleaseEvent.WaitFor(1000) <> wrSignaled do
+  begin
+    if GetState <> TDeviceState.ONLINE then
+      break;
+
+    var RecentData := TDictionary<integer, string>.Create;
+    try
+      ExecuteShellCommand(TPSReceiver.PS_COMMAND, TPSReceiver.Create(self,
+        procedure(const [ref] AData: TPair<integer, string>)
+        begin
+          RecentData.AddOrSetValue(AData.Key, AData.Value);
+        end
+      ));
+
+      FMREWProcessInfo.BeginWrite;
+      try
+        var OldData := FProcessInfo.ToArray;
+        for var Data in OldData do
+          if not RecentData.ContainsKey(Data.Key) then
+            FProcessInfo.Remove(Data.Key);
+
+        for var Data in RecentData do
+          FProcessInfo.AddOrSetValue(Data.Key, Data.Value);
+
+      finally
+        FMREWProcessInfo.EndWrite;
+      end;
+
+    finally
+      RecentData.Free;
+    end;
+  end;
+end;
+
 procedure TDevice.Reboot(Into: string);
 begin
   TAdbHelper.Reboot(Into, TAndroidDebugBridge.GetSocketAddress, self);
@@ -428,12 +490,12 @@ begin
   if PkgName.Trim.IsEmpty then
     PkgName := UNKNOWN_PACKAGE;
 
-  FClientInfo.AddOrSetValue(Pid, PkgName);
-end;
-
-procedure TDevice.SetMountingPoint(Name, Value: string);
-begin
-  FMountPoints.Add(Name, Value);
+  FMREWProcessInfo.BeginWrite;
+  try
+    FProcessInfo.AddOrSetValue(Pid, PkgName);
+  finally
+    FMREWProcessInfo.EndWrite;
+  end;
 end;
 
 procedure TDevice.SetState(Value: TDeviceState);

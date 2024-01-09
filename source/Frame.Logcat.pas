@@ -31,7 +31,6 @@ type
     SplitterTop: TSplitter;
     PopupMenuDevices: TPopupMenu;
     PanelDevice: TPanel;
-    LabelDevice: TLabel;
     VirtualStringLogcat: TVirtualStringTree;
     SpeedButtonStartStop: TSpeedButton;
     SpeedButtonClearLogs: TSpeedButton;
@@ -55,6 +54,7 @@ type
     SpeedButtonRecordScreen: TSpeedButton;
     ActionTakeScreenshot: TAction;
     ActionSoftWrap: TAction;
+    ComboBoxDevices: TComboBox;
     procedure ImageDeviceClick(Sender: TObject);
     procedure VirtualStringLogcatGetText(Sender: TBaseVirtualTree;
       Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
@@ -76,6 +76,9 @@ type
     procedure ActionTakeScreenshotExecute(Sender: TObject);
     procedure ActionTakeScreenshotUpdate(Sender: TObject);
     procedure ActionSoftWrapExecute(Sender: TObject);
+    procedure ComboBoxDevicesDropDown(Sender: TObject);
+    procedure ComboBoxDevicesSelect(Sender: TObject);
+    procedure ComboBoxDevicesCloseUp(Sender: TObject);
   private const
     COLUMN_TIME = 0;
     COLUMN_PID  = 1;
@@ -91,6 +94,8 @@ type
 
     FMapDeviceMenuItem: TDictionary<IDevice, TMenuItem>;
     FMapMenuItemDevice: TDictionary<TMenuItem, IDevice>;
+
+    FDevices: TList<IDevice>;
 
     FSelectedDevice: IDevice;
     FLogcat: ILogcatReceiverTask;
@@ -111,6 +116,8 @@ type
     procedure RefreshVirtualTreeByFilters;
     procedure RecalcVirtualTreeScroll;
     procedure DoSoftWrapNode(Node: PVirtualNode);
+
+    function GetDisplayTextDevice(Device: IDevice): string;
     procedure DoMenuItemDeviceClick(Sender: TObject);
   private
     //IDeviceChangeListener
@@ -130,8 +137,6 @@ type
   end;
 
 implementation
-
-//const adbOsLocale = 'c:\Users\Public\Documents\Embarcadero\Studio\23.0\CatalogRepository\AndroidSDK-2525-23.0.50491.5718\platform-tools\Adb.exe';
 
 {$R *.dfm}
 
@@ -414,6 +419,7 @@ begin
   FIsAutoScroll := true;
   FIsSoftWarp   := true;
 
+  FDevices := TList<IDevice>.Create;
   FMapDeviceMenuItem := TDictionary<IDevice, TMenuItem>.Create;
   FMapMenuItemDevice := TDictionary<TMenuItem, IDevice>.Create;
   FLogList := TList<TLogcatMessage>.Create;
@@ -444,6 +450,7 @@ begin
   FLogList.Free;
   FMapDeviceMenuItem.Free;
   FMapMenuItemDevice.Free;
+  FDevices.Free;
   FreeAndNil(FFilters);
   inherited;
 end;
@@ -457,6 +464,39 @@ begin
   FFilters := TLogcatFilter.FromString(FilterText, LogLevel);
 
   RefreshVirtualTreeByFilters;
+end;
+
+procedure TFrameLogcat.ComboBoxDevicesCloseUp(Sender: TObject);
+begin
+  if assigned(FSelectedDevice) and (ComboBoxDevices.ItemIndex = -1) then
+  begin
+    ComboBoxDevices.ItemIndex := ComboBoxDevices.Items.IndexOfObject(FSelectedDevice as TObject);
+  end;
+end;
+
+procedure TFrameLogcat.ComboBoxDevicesDropDown(Sender: TObject);
+begin
+ with ComboBoxDevices do
+  begin
+    Items.BeginUpdate;
+    Items.Clear;
+    for var Device in FDevices do
+      Items.AddObject(GetDisplayTextDevice(Device), Device as TObject);
+
+    Items.EndUpdate;
+  end;
+end;
+
+procedure TFrameLogcat.ComboBoxDevicesSelect(Sender: TObject);
+begin
+  var NewSelected := TInterfacedObject(ComboBoxDevices.Items.Objects[ComboBoxDevices.ItemIndex]) as IDevice;
+  if NewSelected = nil then
+    exit;
+
+  if (FSelectedDevice <> nil) and (FSelectedDevice <> NewSelected) then
+    LogStop;
+
+  FSelectedDevice := NewSelected;
 end;
 
 procedure TFrameLogcat.DeviceChanged(Device: IDevice; Change: TDeviceChanges);
@@ -485,7 +525,7 @@ begin
 
   if FSelectedDevice = Device then
   begin
-    LabelDevice.Caption := Text;
+    ComboBoxDevices.Text := Text;
   end;
 end;
 
@@ -499,44 +539,25 @@ begin
     else
       ImageDevice := 4;
 
-    var MenuItem := PopupMenuDevices.CreateMenuItem;
-    MenuItem.Caption    := Text;
-    MenuItem.ImageIndex := ImageDevice;
-    MenuItem.OnClick    := DoMenuItemDeviceClick;
-
-    PopupMenuDevices.Items.Add(MenuItem);
-
-    FMapDeviceMenuItem.AddOrSetValue(Device, MenuItem);
-    FMapMenuItemDevice.AddOrSetValue(MenuItem, Device);
+    FDevices.Add(Device);
   end);
 end;
 
 procedure TFrameLogcat.DeviceDisconnected(Device: IDevice);
 begin
   TThread.Queue(nil, procedure begin
-    var Text := format('%s (%s, %s) [%s]', [Device.GetSerialNumber, 'Android 9', 'API 28', Device.GetState.ToString]);
     var ImageDevice: integer;
     if Device.IsOnline then
       ImageDevice := 3
     else
       ImageDevice := 4;
 
-    var MenuItem: TMenuItem;
-    if FMapDeviceMenuItem.TryGetValue(Device, MenuItem) then
-    begin
-      MenuItem.Caption    := Text;
-      MenuItem.ImageIndex := ImageDevice;
 
-      PopupMenuDevices.Items.Remove(MenuItem);
-    end;
-
-    FMapDeviceMenuItem.Remove(Device);
-    FMapMenuItemDevice.Remove(MenuItem);
-
+    FDevices.Remove(Device);
     if FSelectedDevice = Device then
     begin
-      LabelDevice.Caption := Text;
       LogStop;
+      FSelectedDevice := nil;
     end;
   end);
 end;
@@ -549,7 +570,6 @@ begin
     FSelectedDevice := Device;
 
     var Text := format('%s (%s, %s) [%s]', [Device.GetSerialNumber, 'Android 9', 'API 28', Device.GetState.ToString]);
-    LabelDevice.Caption := Text;
   end;
 end;
 
@@ -577,6 +597,24 @@ begin
   Node.NodeHeight := TextH+VirtualStringLogcat.TextMargin;
 end;
 
+function TFrameLogcat.GetDisplayTextDevice(Device: IDevice): string;
+  const RO_MODEL = 'ro.product.model';
+        RO_BRAND = 'ro.product.brand';
+        RO_BUILD = 'ro.build.version.release';
+        RO_SDK   = 'ro.build.version.sdk';
+begin
+  if not assigned(Device) then
+    exit(String.Empty);
+
+  result := format('%s %s (%s) Android %s, API %s',
+    [Device.GetProperty(RO_BRAND),
+     Device.GetProperty(RO_MODEL),
+     Device.GetSerialNumber,
+     Device.GetProperty(RO_BUILD),
+     Device.GetProperty(RO_SDK)
+    ]);
+end;
+
 procedure TFrameLogcat.ImageDeviceClick(Sender: TObject);
 begin
   var AbsoluteRect := PanelDevice.ClientToScreen(PanelDevice.ClientRect);
@@ -598,18 +636,11 @@ begin
     if not FIsStartedLog then
       break;
 
-    var MsgTime: TDateTime;
-    Msg.TryToTime(MsgTime);
-    var IsNeedLog := (MsgTime.CompareDateTime(FStartLogTime) = GreaterThanValue);
-
-    if IsNeedLog then
-    begin
-      FMRW.BeginWrite;
-      try
-        FLogList.Add(Msg);
-      finally
-        FMRW.EndWrite;
-      end;
+    FMRW.BeginWrite;
+    try
+      FLogList.Add(Msg);
+    finally
+      FMRW.EndWrite;
     end;
   end;
 
@@ -643,7 +674,6 @@ begin
   end);
 
   sleep(10);
-
 end;
 
 procedure TFrameLogcat.LogStop;

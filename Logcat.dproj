@@ -191,6 +191,7 @@
             <Form>FormTakeScreenshot</Form>
         </DCCReference>
         <DCCReference Include="source\adb.RawImage.pas"/>
+        <DCCReference Include="source\adb.Receiver.PSReceiver.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

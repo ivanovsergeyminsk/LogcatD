@@ -10,7 +10,6 @@ uses
   , System.Math
   , System.Types
   , System.Types.Nullable
-  , Common.Debug
 
   , adb.AndroidDebugBridge
   , adb.Protocol
@@ -234,10 +233,7 @@ begin
     Channel.ReceiveTimeout := maxTimeToOutputResponse;
 
     Channel.Connect(AdbSockAddr);
-    TDebug.WriteLine('"W: ExecuteRemoteCommand" '+Command+' connected');
-
     SetDevice(Channel, Device);
-    TDebug.WriteLine('"W: ExecuteRemoteCommand" '+Command+' SetDivice');
 
     var Cmd := TAdbCommandShell.Create(Command);
     try
@@ -245,12 +241,10 @@ begin
     finally
       FreeAndNil(cmd);
     end;
-    TDebug.WriteLine('"W: ExecuteRemoteCommand" '+Command+' TAdbCommandShell');
 
     var Response := ReadAdbResponse(Channel, false);
     if not Response.OKAY then
       raise EAdbCommandRejectedException.Create(Response.Msg);
-    TDebug.WriteLine('"W: ExecuteRemoteCommand" '+Command+' Response');
 
     var Data: TArray<byte>;
     while true do
@@ -264,7 +258,6 @@ begin
 
       if count = 0 then
       begin
-        TDebug.WriteLine('"W: ExecuteRemoteCommand" '+Command+' Reciver.Flush');
         Receiver.Flush;
       end
       else
@@ -272,7 +265,6 @@ begin
         // send data to receiver if present
         if Receiver <> nil then
         begin
-          TDebug.WriteLine('"W: ExecuteRemoteCommand" '+Command+' Receiver.AddOutput');
           Receiver.AddOutput(Data, 0, count);
         end;
       end;
