@@ -702,6 +702,11 @@ begin
   try
     if not FDeviceListeners.Contains(Listener) then
       FDeviceListeners.Add(Listener);
+
+    var LDevices := FSelf.FDeviceMonitor.GetDevices;
+    for var Device in LDevices do
+     Listener.DeviceConnected(Device);
+
   finally
     TMonitor.Exit(FLock);
   end;
@@ -1177,8 +1182,8 @@ begin
   TDeviceMonitor(FDeviceMonitor).Stop;
   FDeviceMonitor := nil;
 
-  if not StopAdb then
-    exit(false);
+//  if not StopAdb then
+//    exit(false);
 
   FStarted := false;
   result := true;

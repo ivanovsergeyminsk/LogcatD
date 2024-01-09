@@ -26,15 +26,13 @@ type
 //    RX_PS = '\w+\s+(?<pid>\d+)\s+\d+\s+\d+\s+\d+\s+[\d\w]+\s+\d+\s+\w\s+(?<name>.+)';
     RX_PS = '(?<pid>\d+)\s(?<name>.+)';
   private
-    /// indicates if we need to read the first
-    FDevice: IDevice;
     FPSPattern: TRegEx;
     FIsCancelled: boolean;
     SW: TStopwatch;
 
     FCallbackPID: TCallbackPID;
   public
-    constructor Create(Device: IDevice; CallbackPID: TCallbackPID);
+    constructor Create(CallbackPID: TCallbackPID);
 
     procedure ProcessNewLines(const [ref] Lines: TArray<string>); override;
     function IsCancelled: boolean; override;
@@ -51,11 +49,10 @@ uses
 
 { TPSReceiver }
 
-constructor TPSReceiver.Create(Device: IDevice; CallbackPID: TCallbackPID);
+constructor TPSReceiver.Create(CallbackPID: TCallbackPID);
 begin
   inherited Create;
 
-  FDevice := Device;
   FPSPattern := TRegEx.Create(RX_PS, [roNotEmpty, roCompiled]);
   FIsCancelled := false;
 

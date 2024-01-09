@@ -13,6 +13,7 @@ uses
   , System.RegularExpressions
   , System.Process
   , System.Threading
+  , System.Classes
   , adb.AndroidDebugBridge
   , adb.AdbHelper
   , adb.Preferences
@@ -269,17 +270,22 @@ end;
 
 destructor TDevice.Destroy;
 begin
-  FReleaseEvent.SetEvent;
+  TThread.ForceQueue(nil,
+    procedure
+    begin
+      FReleaseEvent.SetEvent;
 
-  if assigned(FProcessMonitorLoop) then
-    TTask.WaitForAll([FProcessMonitorLoop]);
+      if assigned(FProcessMonitorLoop) then
+        TTask.WaitForAll([FProcessMonitorLoop]);
 
-  FProcessMonitorLoop := nil;
-  FReleaseEvent.Free;
-  FProperties.Free;
-  FProcessInfo.Free;
-  FMonitor := nil;
-  inherited;
+      FProcessMonitorLoop := nil;
+      FReleaseEvent.Free;
+      FProperties.Free;
+      FProcessInfo.Free;
+      FMonitor := nil;
+      inherited;
+    end
+  )
 end;
 
 procedure TDevice.ExecuteShellCommand(Command: string; Receiver: IShellOutputReceiver; MaxTimeToOutputResponse: integer);
@@ -425,19 +431,24 @@ end;
 
 procedure TDevice.ProcessMonitorLoop;
 begin
-  while FReleaseEvent.WaitFor(1000) <> wrSignaled do
+  while FReleaseEvent.WaitFor(5000) <> wrSignaled do
   begin
     if GetState <> TDeviceState.ONLINE then
       break;
 
     var RecentData := TDictionary<integer, string>.Create;
     try
-      ExecuteShellCommand(TPSReceiver.PS_COMMAND, TPSReceiver.Create(self,
+      try
+      ExecuteShellCommand(TPSReceiver.PS_COMMAND, TPSReceiver.Create(
         procedure(const [ref] AData: TPair<integer, string>)
         begin
           RecentData.AddOrSetValue(AData.Key, AData.Value);
         end
       ));
+      except
+        on E: Exception do
+          continue;
+      end;
 
       FMREWProcessInfo.BeginWrite;
       try
