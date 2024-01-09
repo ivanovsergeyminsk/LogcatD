@@ -192,6 +192,20 @@ begin
 end;
 
 procedure TFormTakeScreenshot.DoTakeScreenshot;
+
+  procedure BRGA2RGBA(var RawImageData: TArray<byte>);
+  begin
+    var I := 0;
+    while I < Length(RawImageData) do
+    begin
+      var tmp := RawImageData[I];
+      RawImageData[I] := RawImageData[I+2];
+      RawImageData[I+2] := tmp;
+
+      inc(I, 4);
+    end;
+  end;
+
 begin
   if FDevice.IsOffline then
     exit;
@@ -201,6 +215,7 @@ begin
   if FScreenRaw.HasValue then
   begin
     var RawImage := FScreenRaw.Value;
+    BRGA2RGBA(RawImage.Data);
     FScreenshot.Handle := CreateBitmap(RawImage.Width, RawImage.Height, RawImage.ColorSpace, RawImage.Bpp, @RawImage.Data[0]);
     ImageScreenshot.Picture.Bitmap.Assign(FScreenshot);
   end;
