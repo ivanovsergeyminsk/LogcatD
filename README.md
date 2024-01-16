@@ -41,7 +41,7 @@ Negated terms combine with AND "*-tag:foo -tag:bar*" means "!foo AND !bar"
 
 You can combine keys: *-level:i -package:libc tag:native*
 
-[AndoridLogcat.mp4](https://github.com/ivanovsergeyminsk/LogcatD/assets/25233737/d2f6ba57-ae70-4681-aaac-95846ed815e0)
+[AndroidLogcat.mp4](https://github.com/ivanovsergeyminsk/LogcatD/assets/25233737/d2f6ba57-ae70-4681-aaac-95846ed815e0)
 
 ## Depends
 <a name="depends"></a>
