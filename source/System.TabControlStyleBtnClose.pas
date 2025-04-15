@@ -84,6 +84,8 @@ var
 begin
   inherited;
 
+  if not (Control is TPageControl) then
+    exit;
   if TPageControl(Control).Pages[Index] is TCloseTabSheet then
   begin
     if not TCloseTabSheet(TPageControl(Control).Pages[Index]).IsShowCloseButton then
